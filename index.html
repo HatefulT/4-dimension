@@ -1,0 +1,338 @@
+<meta charset="utf-8">
+<style>
+* { margin: 0; }
+#menu { position: fixed; }</style>
+<div id="menu">
+  <h1>My 4d laboratory</h1>
+  <ul>
+    <li>I dont understand it;-)</li>
+    <li>First, our coordinates is xyzw, where w is 4 dim</li>
+    <li>Controls: 
+      <ul>
+        <li>w, s - forward/backward (changes z);</li>
+        <li>a, d - left/right (changes x);</li>
+        <li>r, f - up/down (changes y);</li>
+      </ul>
+    </li>
+    <li>Tap on canvas to explore</li>
+    <li>Use ESC to open this menu</li>
+  </ul>
+  <ul>
+    <h3>Rotations</h3>
+    <li><label><input type="checkbox" autocomplete="off" onchange="checks.xy=this.checked">in xy</label></li>
+    <li><label><input type="checkbox" autocomplete="off" onchange="checks.xz=this.checked">in xz</label></li>
+    <li><label><input type="checkbox" autocomplete="off" onchange="checks.xw=this.checked">in xw</label></li>
+    <li><label><input type="checkbox" autocomplete="off" onchange="checks.yz=this.checked">in yz</label></li>
+    <li><label><input type="checkbox" autocomplete="off" onchange="checks.yw=this.checked">in yw</label></li>
+    <li><label><input type="checkbox" autocomplete="off" onchange="checks.zw=this.checked">in zw</label></li>
+  </ul>
+</div>
+<script>
+
+var w, h, c, ctx;
+
+var shapes = [];
+
+var cube;
+
+var pos,
+    al = 0,
+    be = 0,
+    fov,
+    r;
+
+var menu;
+
+var keys = { w: false, s: false,
+             a: false, d: false,
+             r: false, f: false, 
+             t: false, g: false };
+
+var checks = { xy: false, xz: false,
+               yz: false, xw: false,
+               yw: false, zw: false };
+
+window.onload = function() {
+  c = document.createElement('canvas');
+  document.body.appendChild(c);
+  c.width = w = innerWidth;
+  c.height = h = innerHeight;
+  ctx = c.getContext('2d');
+  
+  menu = document.getElementById('menu');
+  
+  pos = [0, 0, -150, -150];
+  fov = Math.PI/3*2
+  r = w / (2 * Math.tan(fov/2));
+  
+  c.addEventListener('mousedown', function(e) {
+    c.requestPointerLock();
+  });
+  c.addEventListener('mousemove', function(e) {
+    if(document.pointerLockElement != c) {
+      return;
+    }
+    
+    al += 2*e.movementX*fov/w;
+    be += 2*e.movementY*fov/h;
+    if(be > Math.PI/2) be = Math.PI/2;
+    else if(be < -Math.PI/2) be = -Math.PI/2;
+  });
+  window.addEventListener('keydown', function(e) {
+    var k = e.key.toLowerCase();
+    if(k === 'w' || k === 'ц') keys.w = true;
+    else if(k === 'a' || k === 'ф') keys.a = true;
+    else if(k === 's' || k === 'ы') keys.s = true;
+    else if(k === 'd' || k === 'в') keys.d = true;
+    else if(k === 'r' || k === 'к') keys.r = true;
+    else if(k === 'f' || k === 'а') keys.f = true;
+    else if(k === 't' || k === 'е') keys.t = true;
+    else if(k === 'g' || k === 'п') keys.g = true;
+  });
+  window.addEventListener('keyup', function(e) {
+    var k = e.key.toLowerCase();
+    if(k === 'w' || k === 'ц') keys.w = false;
+    else if(k === 'a' || k === 'ф') keys.a = false;
+    else if(k === 's' || k === 'ы') keys.s = false;
+    else if(k === 'd' || k === 'в') keys.d = false;
+    else if(k === 'r' || k === 'к') keys.r = false;
+    else if(k === 'f' || k === 'а') keys.f = false;
+    else if(k === 't' || k === 'е') keys.t = false;
+    else if(k === 'g' || k === 'п') keys.g = false;
+  });
+  document.addEventListener('pointerlockchange', function() {
+    if(document.pointerLockElement === c) {
+      menu.style.display = 'none';
+    } else {
+      menu.style.display = 'block';
+    }
+  });
+  
+  cube = generateCube(4, 100);
+  
+  loop();
+}
+
+var t = 0;
+
+var loop = function() {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  
+  var xz = rotationMatrix(4, 0, 2, al),
+      yz = rotationMatrix(4, 1, 2, be),
+      rotation = Matrix.mult(xz, yz);
+  
+  var forward = Matrix.getRow(xz, 2),
+      right = Matrix.getRow(xz, 0),
+      up = Matrix.getRow(yz, 1),
+      rightIn4 = [0, 0, 0, 1];
+  if(keys.w) pos = Vector.add(pos, forward);
+  if(keys.s) pos = Vector.subtract(pos, forward);
+  if(keys.d) pos = Vector.add(pos, right);
+  if(keys.a) pos = Vector.subtract(pos, right);
+  if(keys.f) pos = Vector.add(pos, up);
+  if(keys.r) pos = Vector.subtract(pos, up);
+  //if(keys.t) pos = Vector.add(pos, rightIn4);
+  //if(keys.g) pos = Vector.subtract(pos, rightIn4);
+  
+  var tt = noRotation(4);//rotationMatrix(4, 2, 3, t); // Matrix.mult(rotationMatrix(4, 0, 3, t), 
+  if(checks.xy) tt = Matrix.mult(tt, rotationMatrix(4, 0, 1, t));
+  if(checks.xz) tt = Matrix.mult(tt, rotationMatrix(4, 0, 2, t));
+  if(checks.xw) tt = Matrix.mult(tt, rotationMatrix(4, 0, 3, t));
+  if(checks.yz) tt = Matrix.mult(tt, rotationMatrix(4, 1, 2, t));
+  if(checks.yw) tt = Matrix.mult(tt, rotationMatrix(4, 1, 3, t));
+  if(checks.zw) tt = Matrix.mult(tt, rotationMatrix(4, 2, 3, t));
+  
+  var projectedPoints = [];
+  for(var i=0; i<cube.points.length; i++) {
+    var p = Vector.copy(cube.points[i]);
+    p = Matrix.dot(tt, p);
+    p = Vector.subtract(p, pos);
+    p[0] = p[0]/p[3];
+    p[1] = p[1]/p[3]; //*r;
+    p[2] = p[2]/p[3]; //*r;
+    p = Matrix.dot(rotation, p);
+    p[0] = p[0]/p[2] *r;
+    p[1] = p[1]/p[2] *r;
+    projectedPoints.push(p);
+  }
+  
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  for(var i=0; i<cube.lines.length; i++) {
+    if(cube.lines[i][2]) {
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = cube.lines[i][2];
+    }
+    var p1 = projectedPoints[cube.lines[i][0]],
+        p2 = projectedPoints[cube.lines[i][1]];
+    if( p1[2] < 0 || p2[2] < 0 ) continue;
+    ctx.beginPath();
+    ctx.moveTo(p1[0]+w/2, p1[1]+h/2);
+    ctx.lineTo(p2[0]+w/2, p2[1]+h/2);
+    ctx.stroke();
+    
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#000";
+  }
+  
+  t += 0.01;
+  
+  requestAnimationFrame(loop);
+}
+
+var Triangle = function(points) {
+  this.points = points || [];
+}
+Triangle.prototype = {
+  transform: function(matrix, shift) {
+    shift = shift || [0, 0, 0];
+    var newPoints = [];
+    for(var i=0; i<this.points.length; i++) {
+      newPoints.push(Vector.add(Matrix.dot(matrix, this.points[i]), shift));
+    }
+    return new Triangle(newPoints);
+  },
+  draw: function() {
+    ctx.beginPath();
+    ctx.moveTo(this.points[0][0]+w/2, this.points[0][1]+h/2);
+    ctx.lineTo(this.points[1][0]+w/2, this.points[1][1]+h/2);
+    ctx.lineTo(this.points[2][0]+w/2, this.points[2][1]+h/2);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+  },
+  calculateNormal: function() {
+    var A = Vector.subtract(this.points[1], this.points[0]),
+        B = Vector.subtract(this.points[2], this.points[1]);
+    return [
+      A[1]*B[2] - A[2]*B[1],
+      A[2]*B[0] - A[0]*B[2],
+      A[0]*B[1] - A[1]*B[0]
+    ];
+  },
+  copy: function() {
+    var cpoints = [];
+    for(var i=0; i<this.points.length; i++) {
+      cpoints.push(Vector.copy(this.points[i]));
+    }
+    return new Triangle(cpoints);
+  }
+};
+
+Vector = {
+  add: function(a, b) {
+    var v = []; for(var i=0; i<a.length; i++) v[i] = a[i] + b[i];
+    return v;
+  },
+  subtract: function(a, b) {
+    var v = []; for(var i=0; i<a.length; i++) v[i] = a[i] - b[i];
+    return v;
+  },
+  mult: function(a, n) {
+    var v = []; for(var i=0; i<a.length; i++) v[i] = a[i] * n;
+    return v;
+  },
+  dot: function(a, b) {
+    var v = 0; for(var i=0; i<a.length; i++) v += a[i] * b[i];
+    return v;
+  },
+  mag: function(a) {
+    var s = 0; for(var i=0; i<a.length; i++) s += Math.pow(a[i], 2);
+    return Math.sqrt(s);
+  },
+  copy: function(a) {
+    var v = []; for(var i=0; i<a.length; i++) v[i] = a[i];
+    return v;
+  },
+  normalize: function(a) {
+    var d = this.mag(a);
+    var v = []; for(var i=0; i<a.length; i++) v[i] = a[i] / d;
+    return v;
+  },
+};
+
+Matrix = {
+  mult: function(m1, m2) {
+    var newvalues = [];
+    for(var x=0; x<m1.length; x++) {
+      newvalues[x] = [];
+      for(var y=0; y<m1.length; y++) {
+         newvalues[x][y] = Vector.dot(m1[x], this.getRow(m2, y));
+      }
+    }
+    return newvalues;
+  },
+  getRow: function(m, y) {
+    var v = []; for(var i=0; i<m.length; i++) { v[i] = m[i][y] };
+    return v;
+  },
+  dot: function(m, v) {
+    var v1 = []; // m[0].length;
+    for(var i=0; i<m[0].length; i++) {
+      v1[i] = 0;
+      for(var x=0; x<m.length; x++) {
+        v1[i] += m[x][i] * v[x];
+      }
+    }
+    return v1;
+  }
+};
+var noRotation = function(n) {
+  var val = [];
+  for(var x=0; x<n; x++) {
+    val[x] = [];
+    for(var y=0; y<n; y++) {
+      val[x][y] = 0;
+    }
+    val[x][x] = 1;
+  }
+  return val;
+}
+var rotationMatrix = function(a, n, m, angle) {  // rotation in a-dimensional space in n,m plane
+  var val = noRotation(a);
+  var sin = Math.sin(angle),
+      cos = Math.cos(angle);
+  val[n][n] = cos;
+  val[n][m] = -sin;
+  val[m][n] = sin;
+  val[m][m] = cos;
+  return val;
+}
+
+var Shape = function(points, lines) {
+  this.points = points;
+  this.lines = lines;
+}
+
+var generateCube = function(n, a) { // n-dimensional a=lengthOf
+  var points = [
+    [-a/2],
+    [a/2]
+  ];
+  var lines = [
+    [0, 1]
+  ];
+  for(var i=0; i<n-1; i++) {
+    var m = points.length,
+        q = lines.length;
+    for(var j=0; j<m; j++) {
+      points[j].push(-a/2);
+      var p = Vector.copy(points[j]);
+      p[p.length-1] = a/2;
+      var ind = points.push(p)-1;
+      lines.push([j, ind]);
+    }
+    if(i === n-2) 
+      for(var k=0; k<q; k++) {
+        lines.push([lines[k][0]+m, lines[k][1]+m, "#f00"]);
+        lines[k].push("#00f");
+      }
+    else 
+      for(var k=0; k<q; k++) lines.push([lines[k][0]+m, lines[k][1]+m]);
+  }
+  return new Shape(points, lines);
+}
+
+</script>
