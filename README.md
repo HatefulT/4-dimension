@@ -12,13 +12,13 @@ For clarity, I highlighted the original cube in red and its copy in blue.
 # How projection work
 First, we project our tesseract on 3-d space. 
 
->Each point is its position vector v in 4-d space.  
+Each point is its position vector v in 4-d space.  
 
->To project it on 3-d space we need to divide X, Y, Z values by W value. So simple, right?  
+To project it on 3-d space we need to divide X, Y, Z values by W value. So simple, right?  
 
->Next, we need to project our 3-d projection on 2-d plane.  
+Next, we need to project our 3-d projection on 2-d plane.  
 
->All we need to do is divide x and y by z and multiply by some factor that is responsible for the viewing angle.  
+All we need to do is divide x and y by z and multiply by some factor that is responsible for the viewing angle.  
 
 
 # How rotations work
